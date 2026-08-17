@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CD (Continuous Deployment) Pipeline Visualizer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes pulse-glow {
+      0%, 100% { box-shadow: 0 0 15px rgba(168, 85, 247, 0.4); }
+      50% { box-shadow: 0 0 25px rgba(168, 85, 247, 0.8); }
+    }
+    .active-step {
+      animation: pulse-glow 1.5s infinite;
+      border-color: #a855f7 !important;
+      background-color: rgba(30, 27, 75, 0.9) !important;
+    }
+    .completed-step {
+      border-color: #10b981 !important;
+    }
+    .stream-line {
+      background: linear-gradient(90deg, rgba(168,85,247,0.2) 0%, rgba(168,85,247,1) 50%, rgba(168,85,247,0.2) 100%);
+      background-size: 200% 100%;
+      animation: streamAnim 2s infinite linear;
+    }
+    @keyframes streamAnim {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center p-6 font-sans">
+
+  <!-- Header Section -->
+  <header class="text-center max-w-2xl mb-8">
+    <h1 class="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-300 mb-2">
+      CD Pipeline & Server Deployment Visualizer
+    </h1>
+    <p class="text-slate-400 text-sm">
+      Container Registry (ghcr.io) မှ Production/Dev Server ပေါ်သို့ SSH ဖြင့် Live Deploy ဖြစ်သွားပုံ အဆင့်ဆင့်
+    </p>
+  </header>
+
+  <!-- Controls -->
+  <div class="flex gap-4 mb-8">
+    <button id="btn-next" onclick="nextStep()" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-500 rounded-lg font-medium text-sm transition-all shadow-lg shadow-purple-500/20 active:scale-95">
+      Next Step ➔
+    </button>
+    <button id="btn-auto" onclick="toggleAutoPlay()" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-lg font-medium text-sm transition-all">
+      ▶ Auto Play
+    </button>
+    <button onclick="resetPipeline()" class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-white rounded-lg text-sm transition-all">
+      Reset
+    </button>
+  </div>
+
+  <!-- Main Grid: Pipeline Architecture & Steps -->
+  <div class="w-full max-w-5xl space-y-6">
+
+    <!-- Architecture Visual Flow -->
+    <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 backdrop-blur-md shadow-2xl">
+      <div class="text-xs uppercase tracking-wider text-slate-400 font-semibold mb-4 flex items-center justify-between border-b border-slate-800 pb-3">
+        <span>Deployment Flow Architecture</span>
+        <span id="connection-status" class="font-mono text-xs px-2.5 py-0.5 rounded bg-slate-800 text-slate-400">Status: Standby</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-center relative">
+        <!-- Node 1: GitHub Runner -->
+        <div id="node-github" class="p-4 rounded-xl border border-slate-800 bg-slate-950 transition-all duration-300 flex flex-col items-center justify-center">
+          <div class="text-2xl mb-1">⚙️</div>
+          <h4 class="font-bold text-sm text-slate-200">GitHub CD Runner</h4>
+          <p class="text-xs text-slate-400 mt-1 font-mono">runs-on: ubuntu-latest</p>
+          <span id="github-badge" class="mt-2 text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Idle</span>
+        </div>
+
+        <!-- Node 2: Registry -->
+        <div id="node-registry" class="p-4 rounded-xl border border-slate-800 bg-slate-950 transition-all duration-300 flex flex-col items-center justify-center">
+          <div class="text-2xl mb-1">📦</div>
+          <h4 class="font-bold text-sm text-slate-200">ghcr.io (Registry)</h4>
+          <p class="text-xs text-slate-400 mt-1 font-mono">pos-app:12-9543d6d</p>
+          <span id="registry-badge" class="mt-2 text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Image Ready</span>
+        </div>
+
+        <!-- Node 3: Target Server -->
+        <div id="node-server" class="p-4 rounded-xl border border-slate-800 bg-slate-950 transition-all duration-300 flex flex-col items-center justify-center">
+          <div class="text-2xl mb-1">🖥️</div>
+          <h4 class="font-bold text-sm text-slate-200">Target Server (VPS)</h4>
+          <p class="text-xs text-slate-400 mt-1 font-mono">Port :80 ➔ Next.js :3000</p>
+          <span id="server-badge" class="mt-2 text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-400">Old App Running</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step by Step List -->
+    <div class="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 shadow-2xl">
+      <div class="flex justify-between items-center pb-4 mb-6 border-b border-slate-800">
+        <div>
+          <span class="text-xs uppercase tracking-wider text-slate-400 block font-semibold">CD Stage Execution</span>
+          <span id="stage-desc" class="text-sm font-medium text-purple-400">Ready to initiate deployment</span>
+        </div>
+        <div class="text-right">
+          <span class="text-xs uppercase tracking-wider text-slate-400 block font-semibold">Step Status</span>
+          <span id="step-counter" class="text-sm font-mono text-purple-400">0 / 6</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" id="steps-container">
+        
+        <!-- Step 0 -->
+        <div id="step-0" class="step-card p-4 rounded-xl border border-slate-800 bg-slate-900/40 transition-all duration-300">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold text-slate-400 uppercase">Trigger</span>
+            <span class="status-badge text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pending</span>
+          </div>
+          <h3 class="font-semibold text-slate-200 text-sm">1. CI Success (needs)</h3>
+          <p class="text-xs text-slate-400 mt-1">`build-and-push` အောင်မြင်ပြီး tag version ရရှိသည်နှင့် CD စတင်သည်။</p>
+        </div>
+
+        <!-- Step 1 -->
+        <div id="step-1" class="step-card p-4 rounded-xl border border-slate-800 bg-slate-900/40 transition-all duration-300">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold text-slate-400 uppercase">SSH Handshake</span>
+            <span class="status-badge text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pending</span>
+          </div>
+          <h3 class="font-semibold text-slate-200 text-sm">2. Connect via SSH Key</h3>
+          <p class="text-xs text-slate-400 mt-1">Secrets ထဲက SSH Key ဖြင့် Server သို့ လုံခြုံစွာ လှမ်းချိတ်သည်။</p>
+        </div>
+
+        <!-- Step 2 -->
+        <div id="step-2" class="step-card p-4 rounded-xl border border-slate-800 bg-slate-900/40 transition-all duration-300">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold text-slate-400 uppercase">Auth on Server</span>
+            <span class="status-badge text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pending</span>
+          </div>
+          <h3 class="font-semibold text-slate-200 text-sm">3. Docker Login ghcr.io</h3>
+          <p class="text-xs text-slate-400 mt-1">Server ပေါ်တွင် ghcr.io သို့ Token ဖြင့် authentication ဝင်ရောက်သည်။</p>
+        </div>
+
+        <!-- Step 3 -->
+        <div id="step-3" class="step-card p-4 rounded-xl border border-slate-800 bg-slate-900/40 transition-all duration-300">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold text-slate-400 uppercase">Pull Image</span>
+            <span class="status-badge text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pending</span>
+          </div>
+          <h3 class="font-semibold text-slate-200 text-sm">4. Docker Pull Latest Version</h3>
+          <p class="text-xs text-slate-400 mt-1">Tag အသစ်ဖြစ်သော Docker Image အား ဆာဗာပေါ်သို့ ဆွဲချသည်။</p>
+        </div>
+
+        <!-- Step 4 -->
+        <div id="step-4" class="step-card p-4 rounded-xl border border-slate-800 bg-slate-900/40 transition-all duration-300">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold text-amber-400 uppercase">Zero Downtime Swap</span>
+            <span class="status-badge text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pending</span>
+          </div>
+          <h3 class="font-semibold text-slate-200 text-sm">5. Stop & Remove Old Container</h3>
+          <p class="text-xs text-slate-400 mt-1">ယခင် run ထားသော Container အဟောင်းအား ရပ်တန့်ပြီး ဖျက်သည်။</p>
+        </div>
+
+        <!-- Step 5 -->
+        <div id="step-5" class="step-card p-4 rounded-xl border border-slate-800 bg-slate-900/40 transition-all duration-300">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-semibold text-emerald-400 uppercase">Live Deployed</span>
+            <span class="status-badge text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400">Pending</span>
+          </div>
+          <h3 class="font-semibold text-emerald-300 text-sm">6. Run New Container (Live)</h3>
+          <p class="text-xs text-slate-400 mt-1">Image အသစ်အား Port 80 သို့ ချိတ်ဆက်ကာ အောင်မြင်စွာ run လိုက်သည်။</p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Live Server Console / Log Box -->
+    <div class="p-4 rounded-xl bg-black/85 border border-slate-800 font-mono text-xs text-slate-300 shadow-xl">
+      <div class="flex items-center justify-between text-slate-500 mb-2 border-b border-slate-800 pb-1">
+        <span>SSH TERMINAL SESSION LOG</span>
+        <span id="log-time">--:--:--</span>
+      </div>
+      <div id="log-content" class="text-purple-400">> CD Visualizer ready. Click 'Next Step' or 'Auto Play'.</div>
+    </div>
+
+  </div>
+
+  <script>
+    let currentStep = -1;
+    let autoPlayInterval = null;
+
+    const logs = [
+      "> [github-workflow] Job 'build-and-push' completed with success. Output version: '12-9543d6d'. Triggering CD...",
+      "> [ssh] Connecting to server at 143.198.xx.xx:22 using ed25519 private key... Connection Established.",
+      "> [ssh-exec] echo '***' | docker login ghcr.io -u phyoewai-io --password-stdin... Login Succeeded!",
+      "> [ssh-exec] docker pull ghcr.io/phyoewai-io/pos-app:12-9543d6d... Digest: sha256:7af3c... Download Complete.",
+      "> [ssh-exec] docker stop pos-app && docker rm pos-app... Old container stopped and cleaned.",
+      "> [ssh-exec] docker run -d --name pos-app -p 80:3000 ghcr.io/phyoewai-io/pos-app:12-9543d6d... Container ID: a1b2c3d4e5f6 [LIVE]"
+    ];
+
+    function updateUI() {
+      const stepCounter = document.getElementById("step-counter");
+      const stageDesc = document.getElementById("stage-desc");
+      const logContent = document.getElementById("log-content");
+      const logTime = document.getElementById("log-time");
+      const connStatus = document.getElementById("connection-status");
+
+      const nodeGithub = document.getElementById("node-github");
+      const nodeRegistry = document.getElementById("node-registry");
+      const nodeServer = document.getElementById("node-server");
+
+      const githubBadge = document.getElementById("github-badge");
+      const registryBadge = document.getElementById("registry-badge");
+      const serverBadge = document.getElementById("server-badge");
+
+      stepCounter.innerText = `${Math.max(0, currentStep + 1)} / 6`;
+      logTime.innerText = new Date().toLocaleTimeString();
+
+      // Reset Architecture Nodes
+      nodeGithub.className = "p-4 rounded-xl border border-slate-800 bg-slate-950 transition-all duration-300 flex flex-col items-center justify-center";
+      nodeRegistry.className = "p-4 rounded-xl border border-slate-800 bg-slate-950 transition-all duration-300 flex flex-col items-center justify-center";
+      nodeServer.className = "p-4 rounded-xl border border-slate-800 bg-slate-950 transition-all duration-300 flex flex-col items-center justify-center";
+
+      // Architecture State Logic
+      if (currentStep === 0) {
+        nodeGithub.className += " border-purple-500 bg-purple-950/20";
+        githubBadge.className = "mt-2 text-[10px] px-2 py-0.5 rounded bg-purple-900 text-purple-300";
+        githubBadge.innerText = "Job Triggered";
+        connStatus.innerText = "Status: Job Started";
+        connStatus.className = "font-mono text-xs px-2.5 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800";
+        stageDesc.innerText = "Triggering deployment job";
+      } else if (currentStep === 1) {
+        nodeGithub.className += " border-purple-500 bg-purple-950/20";
+        nodeServer.className += " border-indigo-500 bg-indigo-950/20";
+        connStatus.innerText = "Status: SSH Connected (Secure Tunnel)";
+        connStatus.className = "font-mono text-xs px-2.5 py-0.5 rounded bg-indigo-950 text-indigo-300 border border-indigo-800";
+        stageDesc.innerText = "SSH Tunnel Established with Server";
+      } else if (currentStep === 2 || currentStep === 3) {
+        nodeRegistry.className += " border-pink-500 bg-pink-950/20";
+        nodeServer.className += " border-purple-500 bg-purple-950/20";
+        registryBadge.className = "mt-2 text-[10px] px-2 py-0.5 rounded bg-pink-900 text-pink-300";
+        registryBadge.innerText = "Transferring Image";
+        connStatus.innerText = "Status: Pulling Image from Registry";
+        connStatus.className = "font-mono text-xs px-2.5 py-0.5 rounded bg-pink-950 text-pink-300 border border-pink-800";
+        stageDesc.innerText = "Streaming Docker Image to VPS";
+      } else if (currentStep === 4) {
+        nodeServer.className += " border-amber-500 bg-amber-950/20";
+        serverBadge.className = "mt-2 text-[10px] px-2 py-0.5 rounded bg-amber-900 text-amber-300";
+        serverBadge.innerText = "Swapping Containers";
+        connStatus.innerText = "Status: Container Switch in progress";
+        connStatus.className = "font-mono text-xs px-2.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800";
+        stageDesc.innerText = "Stopping Old Instance";
+      } else if (currentStep === 5) {
+        nodeServer.className += " border-emerald-500 bg-emerald-950/30";
+        serverBadge.className = "mt-2 text-[10px] px-2 py-0.5 rounded bg-emerald-900 text-emerald-300 font-bold";
+        serverBadge.innerText = "App Live (v12-9543d6d)";
+        connStatus.innerText = "Status: Deployment Complete (100% Healthy)";
+        connStatus.className = "font-mono text-xs px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800";
+        stageDesc.innerText = "Live Deployment Successful!";
+      }
+
+      // Step Cards UI
+      for (let i = 0; i < 6; i++) {
+        const card = document.getElementById(`step-${i}`);
+        const badge = card.querySelector(".status-badge");
+
+        if (i < currentStep) {
+          card.className = "step-card p-4 rounded-xl border border-emerald-500/50 bg-emerald-950/20 completed-step transition-all duration-300";
+          badge.className = "status-badge text-xs px-2 py-0.5 rounded bg-emerald-900/60 text-emerald-300";
+          badge.innerText = "Done ✓";
+        } else if (i === currentStep) {
+          card.className = "step-card p-4 rounded-xl border border-purple-500 bg-slate-900/90 active-step transition-all duration-300";
+          badge.className = "status-badge text-xs px-2 py-0.5 rounded bg-purple-900/80 text-purple-300";
+          badge.innerText = "Executing...";
+          logContent.innerText = logs[i];
+        } else {
+          card.className = "step-card p-4 rounded-xl border border-slate-800 bg-slate-900/40 transition-all duration-300";
+          badge.className = "status-badge text-xs px-2 py-0.5 rounded bg-slate-800 text-slate-400";
+          badge.innerText = "Pending";
+        }
+      }
+    }
+
+    function nextStep() {
+      if (currentStep < 5) {
+        currentStep++;
+        updateUI();
+      } else {
+        stopAutoPlay();
+      }
+    }
+
+    function toggleAutoPlay() {
+      if (autoPlayInterval) {
+        stopAutoPlay();
+      } else {
+        if (currentStep >= 5) resetPipeline();
+        document.getElementById("btn-auto").innerText = "⏸ Pause";
+        document.getElementById("btn-auto").classList.add("bg-amber-600", "border-amber-500");
+        nextStep();
+        autoPlayInterval = setInterval(() => {
+          if (currentStep < 5) {
+            nextStep();
+          } else {
+            stopAutoPlay();
+          }
+        }, 2000);
+      }
+    }
+
+    function stopAutoPlay() {
+      clearInterval(autoPlayInterval);
+      autoPlayInterval = null;
+      document.getElementById("btn-auto").innerText = "▶ Auto Play";
+      document.getElementById("btn-auto").classList.remove("bg-amber-600", "border-amber-500");
+    }
+
+    function resetPipeline() {
+      stopAutoPlay();
+      currentStep = -1;
+      document.getElementById("log-content").innerText = "> System reset. Ready for new CD run.";
+      const connStatus = document.getElementById("connection-status");
+      connStatus.innerText = "Status: Standby";
+      connStatus.className = "font-mono text-xs px-2.5 py-0.5 rounded bg-slate-800 text-slate-400";
+      document.getElementById("stage-desc").innerText = "Ready to initiate deployment";
+      updateUI();
+    }
+  </script>
+</body>
+</html>
