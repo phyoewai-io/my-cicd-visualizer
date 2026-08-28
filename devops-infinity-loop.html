@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive DevOps Loop & CALMS Visualizer</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0b0f19;
+      --card-bg: rgba(18, 24, 38, 0.85);
+      --dev-color: #00f0ff;
+      --ops-color: #ff007f;
+      --culture-color: #ffb703;
+      --glow-dev: rgba(0, 240, 255, 0.4);
+      --glow-ops: rgba(255, 0, 127, 0.4);
+      --glow-culture: rgba(255, 183, 3, 0.4);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 3rem 1.5rem;
+      background-image: 
+        radial-gradient(circle at 20% 20%, rgba(0, 240, 255, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 80% 40%, rgba(255, 0, 127, 0.08) 0%, transparent 40%),
+        radial-gradient(circle at 50% 80%, rgba(255, 183, 3, 0.06) 0%, transparent 50%),
+        linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 40px 40px, 40px 40px;
+    }
+
+    /* Header */
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, var(--dev-color), #fff, var(--ops-color));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 1rem;
+      letter-spacing: 1px;
+    }
+
+    /* Visualizer Container */
+    .container {
+      position: relative;
+      width: 1000px;
+      height: 480px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    svg.loop-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      filter: drop-shadow(0 0 15px rgba(0, 240, 255, 0.2));
+    }
+
+    /* Track Styles */
+    .track-bg {
+      fill: none;
+      stroke: rgba(255, 255, 255, 0.08);
+      stroke-width: 6;
+      stroke-linecap: round;
+    }
+
+    .track-pulse {
+      fill: none;
+      stroke: url(#loop-gradient);
+      stroke-width: 4;
+      stroke-dasharray: 40, 180;
+      animation: dash 12s linear infinite;
+    }
+
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -1000;
+      }
+    }
+
+    /* Center Section Labels */
+    .loop-center-label {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .loop-center-label.dev-center {
+      left: 26.5%;
+      top: 50%;
+    }
+
+    .loop-center-label.ops-center {
+      left: 73.5%;
+      top: 50%;
+    }
+
+    .center-tag {
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(11, 15, 25, 0.7);
+      backdrop-filter: blur(4px);
+    }
+
+    .dev-center .center-tag {
+      color: var(--dev-color);
+      border: 1px solid rgba(0, 240, 255, 0.3);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+    }
+
+    .ops-center .center-tag {
+      color: var(--ops-color);
+      border: 1px solid rgba(255, 0, 127, 0.3);
+      box-shadow: 0 0 20px rgba(255, 0, 127, 0.15);
+    }
+
+    /* Stage Nodes */
+    .node-container {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    .node {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .node-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: var(--card-bg);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      backdrop-filter: blur(8px);
+      transition: all 0.3s ease;
+    }
+
+    .node-label {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+      transition: all 0.3s ease;
+      background: rgba(11, 15, 25, 0.8);
+      padding: 2px 8px;
+      border-radius: 4px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .node.dev .node-icon {
+      color: var(--dev-color);
+      border-color: rgba(0, 240, 255, 0.4);
+    }
+    .node.dev:hover .node-icon, .node.dev.active .node-icon {
+      border-color: var(--dev-color);
+      box-shadow: 0 0 25px var(--glow-dev);
+      transform: scale(1.15);
+    }
+
+    .node.ops .node-icon {
+      color: var(--ops-color);
+      border-color: rgba(255, 0, 127, 0.4);
+    }
+    .node.ops:hover .node-icon, .node.ops.active .node-icon {
+      border-color: var(--ops-color);
+      box-shadow: 0 0 25px var(--glow-ops);
+      transform: scale(1.15);
+    }
+
+    .node:hover .node-label, .node.active .node-label {
+      color: #fff;
+    }
+
+    /* Flow Pulse Particles */
+    .particle {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 15px #fff, 0 0 30px var(--dev-color);
+      offset-path: path('M 500,240 C 350,60 150,60 150,240 C 150,420 350,420 500,240 C 650,60 850,60 850,240 C 850,420 650,420 500,240 Z');
+      animation: moveParticle 8s linear infinite;
+    }
+
+    @keyframes moveParticle {
+      0% { offset-distance: 0%; }
+      100% { offset-distance: 100%; }
+    }
+
+    /* Live Status Panel */
+    .status-panel {
+      margin-top: 1rem;
+      width: 1000px;
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1rem 2rem;
+      backdrop-filter: blur(10px);
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #00ff88;
+      box-shadow: 0 0 10px #00ff88;
+      animation: blink 1.5s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .stage-info {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .stage-desc {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+    }
+
+    /* CALMS Section */
+    .calms-wrapper {
+      margin-top: 3.5rem;
+      width: 1000px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .calms-title {
+      font-size: 1.8rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #fff;
+      margin-bottom: 0.5rem;
+    }
+
+    .calms-subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 1.8rem;
+      text-align: center;
+    }
+
+    .calms-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1.2rem;
+      width: 100%;
+    }
+
+    .calms-card {
+      background: var(--card-bg);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.4rem 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+    }
+
+    .calms-card:hover {
+      transform: translateY(-6px);
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+    }
+
+    .calms-card.highlight {
+      border: 2px solid var(--culture-color);
+      box-shadow: 0 0 25px var(--glow-culture);
+      background: linear-gradient(180deg, rgba(255, 183, 3, 0.12) 0%, rgba(18, 24, 38, 0.9) 100%);
+      animation: pulseCulture 3s infinite ease-in-out;
+    }
+
+    @keyframes pulseCulture {
+      0%, 100% { box-shadow: 0 0 20px var(--glow-culture); }
+      50% { box-shadow: 0 0 35px rgba(255, 183, 3, 0.7); }
+    }
+
+    .culture-ribbon {
+      position: absolute;
+      top: 0;
+      right: 0;
+      left: 0;
+      background: var(--culture-color);
+      color: #000;
+      font-size: 0.65rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      padding: 3px 0;
+    }
+
+    .calms-letter {
+      font-size: 2.2rem;
+      font-weight: 900;
+      margin-top: 0.6rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .calms-name {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 0.6rem;
+    }
+
+    .calms-desc {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Color Codes */
+    .c-culture { color: var(--culture-color); }
+    .c-auto { color: #00f0ff; }
+    .c-lean { color: #10b981; }
+    .c-measure { color: #a855f7; }
+    .c-share { color: #ff007f; }
+
+    /* Culture Callout Box */
+    .culture-callout {
+      margin-top: 1.5rem;
+      width: 100%;
+      background: rgba(255, 183, 3, 0.06);
+      border: 1px dashed rgba(255, 183, 3, 0.4);
+      border-radius: 10px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+    }
+
+    .culture-callout i {
+      font-size: 2rem;
+      color: var(--culture-color);
+    }
+
+    .culture-callout-text h4 {
+      font-size: 0.95rem;
+      color: var(--culture-color);
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 0.2rem;
+    }
+
+    .culture-callout-text p {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Back Navigation -->
+  <div style="width: 100%; max-width: 1000px; margin-bottom: 1.5rem; display: flex; justify-content: flex-start;">
+    <a href="index.html" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(18, 24, 38, 0.85); color: #cbd5e1; text-decoration: none; font-size: 0.875rem; transition: all 0.2s ease; cursor: pointer;" onmouseover="this.style.borderColor='rgba(0, 240, 255, 0.5)'; this.style.color='#fff'; this.style.boxShadow='0 0 12px rgba(0, 240, 255, 0.3)';" onmouseout="this.style.borderColor='rgba(255, 255, 255, 0.1)'; this.style.color='#cbd5e1'; this.style.boxShadow='none';">
+      <i class="fa-solid fa-arrow-left" style="color: #00f0ff;"></i>
+      <span>Back to Home</span>
+    </a>
+  </div>
+
+  <header>
+    <h1>DevOps Continuous Visualizer</h1>
+    <p>Continuous Flow Lifecycle &bull; Development &amp; Operations</p>
+  </header>
+
+  <div class="container">
+    <svg class="loop-svg" viewBox="0 0 1000 480">
+      <defs>
+        <linearGradient id="loop-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#00f0ff" />
+          <stop offset="50%" stop-color="#7000ff" />
+          <stop offset="100%" stop-color="#ff007f" />
+        </linearGradient>
+      </defs>
+
+      <path id="infinity-path" class="track-bg" 
+            d="M 500,240 C 350,60 150,60 150,240 C 150,420 350,420 500,240 C 650,60 850,60 850,240 C 850,420 650,420 500,240 Z" />
+      
+      <path class="track-pulse" 
+            d="M 500,240 C 350,60 150,60 150,240 C 150,420 350,420 500,240 C 650,60 850,60 850,240 C 850,420 650,420 500,240 Z" />
+    </svg>
+
+    <div class="loop-center-label dev-center">
+      <span class="center-tag">Development</span>
+    </div>
+    <div class="loop-center-label ops-center">
+      <span class="center-tag">Operations</span>
+    </div>
+
+    <div class="particle"></div>
+
+    <div class="node-container">
+      <div class="node dev" style="left: 17%; top: 20%;" data-title="Plan" data-desc="Define requirements, backlog management, roadmap planning.">
+        <div class="node-icon"><i class="fa-solid fa-lightbulb"></i></div>
+        <div class="node-label">Plan</div>
+      </div>
+
+      <div class="node dev" style="left: 11%; top: 50%;" data-title="Code" data-desc="Writing code, review pipelines, Git branching workflows.">
+        <div class="node-icon"><i class="fa-solid fa-code"></i></div>
+        <div class="node-label">Code</div>
+      </div>
+
+      <div class="node dev" style="left: 20%; top: 78%;" data-title="Build" data-desc="Compiling artifacts, containerization (Docker), dependencies packaging.">
+        <div class="node-icon"><i class="fa-solid fa-cube"></i></div>
+        <div class="node-label">Build</div>
+      </div>
+
+      <div class="node dev" style="left: 36%; top: 72%;" data-title="Test" data-desc="Automated unit tests, integration tests, security & regression checks.">
+        <div class="node-icon"><i class="fa-solid fa-vial"></i></div>
+        <div class="node-label">Test</div>
+      </div>
+
+      <div class="node ops" style="left: 64%; top: 28%;" data-title="Release" data-desc="Artifact staging, version tagging, approval gates.">
+        <div class="node-icon"><i class="fa-solid fa-box-open"></i></div>
+        <div class="node-label">Release</div>
+      </div>
+
+      <div class="node ops" style="left: 80%; top: 22%;" data-title="Deploy" data-desc="CI/CD deployment to Production/Staging, Blue-Green / Canary rollout.">
+        <div class="node-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+        <div class="node-label">Deploy</div>
+      </div>
+
+      <div class="node ops" style="left: 89%; top: 50%;" data-title="Operate" data-desc="Infrastructure management, Autoscaling, Kubernetes clusters & configs.">
+        <div class="node-icon"><i class="fa-solid fa-server"></i></div>
+        <div class="node-label">Operate</div>
+      </div>
+
+      <div class="node ops" style="left: 77%; top: 78%;" data-title="Monitor" data-desc="Metrics, APM, telemetry logs alerting back into future Plans.">
+        <div class="node-icon"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="node-label">Monitor</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="status-panel">
+    <div class="status-badge">
+      <span class="status-dot"></span>
+      Active Phase
+    </div>
+    <div>
+      <div class="stage-info" id="current-stage">Plan</div>
+      <div class="stage-desc" id="current-desc">Define requirements, backlog management, roadmap planning.</div>
+    </div>
+  </div>
+
+  <div class="calms-wrapper">
+    <h2 class="calms-title">The CALMS Framework</h2>
+    <p class="calms-subtitle">The Core Pillars of DevOps Success (DevOps သည် Tool တစ်ခုတည်းမဟုတ်ဘဲ Culture နှင့် ပူးပေါင်းဆောင်ရွက်မှုအပေါ် အခြေခံသည်)</p>
+    
+    <div class="calms-grid">
+      <div class="calms-card highlight">
+        <div class="culture-ribbon">⭐ Core Pillar</div>
+        <div class="calms-letter c-culture">C</div>
+        <div class="calms-name c-culture">Culture</div>
+        <div class="calms-desc">အပြန်အလှန်ယုံကြည်မှု၊ ပူးပေါင်းဆောင်ရွက်မှုနှင့် Blameless Mindset ဖြင့် Dev နှင့် Ops ကြား အတားအဆီးများကို ဖြိုခွင်းခြင်း။</div>
+      </div>
+
+      <div class="calms-card">
+        <div class="calms-letter c-auto">A</div>
+        <div class="calms-name c-auto">Automation</div>
+        <div class="calms-desc">CI/CD ပိုက်လိုင်းများ၊ အလိုအလျောက် Testing နှင့် Infrastructure as Code (IaC) ဖြင့် လူအားလျှော့ချခြင်း။</div>
+      </div>
+
+      <div class="calms-card">
+        <div class="calms-letter c-lean">L</div>
+        <div class="calms-name c-lean">Lean</div>
+        <div class="calms-desc">မလိုအပ်သော အလေအလွင့် (Waste) များကို လျှော့ချပြီး Batch size သေးသေးဖြင့် မြန်မြန်ဆန်ဆန် စဉ်ဆက်မပြတ် ပေးပို့ခြင်း။</div>
+      </div>
+
+      <div class="calms-card">
+        <div class="calms-letter c-measure">M</div>
+        <div class="calms-name c-measure">Measurement</div>
+        <div class="calms-desc">DORA metrics၊ MTTR၊ System Logs နှင့် Deployment Frequency စသည့် Data များအပေါ် အခြေခံ၍ စဉ်ဆက်မပြတ် တိုးတက်စေခြင်း။</div>
+      </div>
+
+      <div class="calms-card">
+        <div class="calms-letter c-share">S</div>
+        <div class="calms-name c-share">Sharing</div>
+        <div class="calms-desc">အတွေ့အကြုံ၊ သင်ခန်းစာများနှင့် အသိပညာဗဟုသုတများကို Team အချင်းချင်း ပွင့်လင်းစွာ ဝေမျှသည့် Feedback Loop တည်ဆောက်ခြင်း။</div>
+      </div>
+    </div>
+
+    <div class="culture-callout">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <div class="culture-callout-text">
+        <h4>Why "Culture" Comes First in CALMS:</h4>
+        <p><strong>DevOps starts with people, not tools.</strong> ကမ္ဘာ့အဆင့်မီ Automation Tools (CI/CD, Kubernetes) တွေရှိနေရင်တောင်မှ Dev နဲ့ Ops အသင်းအဖွဲ့ကြားမှာ ပူးပေါင်းလိုစိတ် (Collaboration) နဲ့ တာဝန်ယူလိုစိတ် (Shared Ownership) ရှိတဲ့ <strong>Culture</strong> မရှိရင် DevOps Implementation ဟာ မအောင်မြင်နိုင်ပါဘူး။ ဒါကြောင့် CALMS ရဲ့ အစအဦး Culture ဟာ အခြေခံအကျဆုံး Foundation ဖြစ်ပါတယ်။</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const stages = [
+      { title: 'Plan', desc: 'Define requirements, backlog management, roadmap planning.' },
+      { title: 'Code', desc: 'Writing code, review pipelines, Git branching workflows.' },
+      { title: 'Build', desc: 'Compiling artifacts, containerization (Docker), dependencies packaging.' },
+      { title: 'Test', desc: 'Automated unit tests, integration tests, security & regression checks.' },
+      { title: 'Release', desc: 'Artifact staging, version tagging, approval gates.' },
+      { title: 'Deploy', desc: 'CI/CD deployment to Production/Staging, Blue-Green / Canary rollout.' },
+      { title: 'Operate', desc: 'Infrastructure management, Autoscaling, Kubernetes clusters & configs.' },
+      { title: 'Monitor', desc: 'Metrics, APM, telemetry logs alerting back into future Plans (Continuous Loop).' }
+    ];
+
+    const nodes = document.querySelectorAll('.node');
+    const stageTitle = document.getElementById('current-stage');
+    const stageDesc = document.getElementById('current-desc');
+    let currentIndex = 0;
+
+    function updateActiveStage(index) {
+      nodes.forEach(n => n.classList.remove('active'));
+      const activeNode = nodes[index];
+      activeNode.classList.add('active');
+      
+      stageTitle.textContent = stages[index].title;
+      stageDesc.textContent = stages[index].desc;
+      stageTitle.style.color = activeNode.classList.contains('dev') ? 'var(--dev-color)' : 'var(--ops-color)';
+    }
+
+    setInterval(() => {
+      currentIndex = (currentIndex + 1) % stages.length;
+      updateActiveStage(currentIndex);
+    }, 2000);
+
+    nodes.forEach((node, idx) => {
+      node.addEventListener('click', () => {
+        currentIndex = idx;
+        updateActiveStage(idx);
+      });
+    });
+
+    updateActiveStage(0);
+  </script>
+</body>
+</html>
