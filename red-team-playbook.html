@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="my" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Red Team Playbook - Beginner Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            dark: '#0a0b10',
+                            card: '#121520',
+                            border: '#1f293d',
+                            green: '#00ff66',
+                            cyan: '#00e5ff',
+                            red: '#ff3366',
+                            muted: '#94a3b8'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['Courier New', Courier, monospace],
+                        sans: ['Padauk', 'Inter', sans-serif]
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Padauk:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Padauk', 'Inter', sans-serif;
+            background-color: #0a0b10;
+            color: #e2e8f0;
+        }
+        .glow-text {
+            text-shadow: 0 0 10px rgba(0, 255, 102, 0.5), 0 0 20px rgba(0, 255, 102, 0.3);
+        }
+        .glow-box {
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+        }
+        .glow-box-red {
+            box-shadow: 0 0 15px rgba(255, 51, 102, 0.15);
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0a0b10;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f293d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00ff66;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-cyber-dark text-slate-100 flex flex-col selection:bg-cyber-green selection:text-black">
+
+    <header class="sticky top-0 z-50 backdrop-blur-md bg-cyber-dark/80 border-b border-cyber-border">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <a href="index.html" class="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-cyber-card border border-cyber-border text-xs text-cyber-muted hover:text-cyber-green hover:border-cyber-green transition gap-1.5">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Hub</span>
+                </a>
+                <div class="w-10 h-10 rounded-lg bg-cyber-green/10 border border-cyber-green flex items-center justify-center text-cyber-green glow-text">
+                    <i class="fa-solid fa-terminal text-xl"></i>
+                </div>
+                <div>
+                    <span class="font-bold text-lg tracking-wider text-cyber-green glow-text">RED TEAM PLAYBOOK</span>
+                    <span class="block text-xs text-cyber-cyan">BEGINNER EDITION (မြန်မာဘာသာ)</span>
+                </div>
+            </div>
+            <nav class="hidden md:flex items-center space-x-6 text-sm">
+                <a href="#intro" class="text-cyber-muted hover:text-cyber-green transition">နိဒါန်း</a>
+                <a href="#comparison" class="text-cyber-muted hover:text-cyber-green transition">ကွာခြားချက်များ</a>
+                <a href="#lifecycle" class="text-cyber-muted hover:text-cyber-green transition">တိုက်ခိုက်မှုအဆင့်ဆင့်</a>
+                <a href="#tools" class="text-cyber-muted hover:text-cyber-green transition">အသုံးဝင်ကိရိယာများ</a>
+                <a href="#cheatsheet" class="text-cyber-muted hover:text-cyber-green transition">Cheatsheet</a>
+                <a href="#tracker" class="text-cyber-muted hover:text-cyber-green transition">သင်ယူမှုမှတ်တိုင်</a>
+            </nav>
+            <div class="flex items-center space-x-3">
+                <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-cyber-red/10 text-cyber-red border border-cyber-red/30 animate-pulse">
+                    <i class="fa-solid fa-shield-halved mr-1.5"></i> လုံခြုံရေးလေ့လာရန်
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <section class="relative overflow-hidden py-16 lg:py-24 border-b border-cyber-border bg-gradient-to-b from-cyber-dark to-[#0f121d]">
+        <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#00ff66_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <div class="inline-block mb-4 px-4 py-1 rounded-full border border-cyber-cyan/30 bg-cyber-cyan/10 text-cyber-cyan text-xs font-mono">
+                $ sudo execute --playbook beginner_guide.sh
+            </div>
+            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight mb-6">
+                Red Team လေ့လာသူများအတွက် <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyber-green to-cyber-cyan glow-text">လက်စွဲလမ်းညွှန်</span>
+            </h1>
+            <p class="max-w-3xl mx-auto text-lg sm:text-xl text-cyber-muted mb-8 leading-relaxed">
+                စတင်လေ့လာသူများအတွက် ရည်ရွယ်၍ Red Teaming ၏ အခြေခံသဘောတရားများ၊ တိုက်ခိုက်မှုလုပ်ငန်းစဉ်များ (Kill Chain) နှင့် မရှိမဖြစ်သုံးရမည့် ကိရိယာများကို မြန်မာဘာသာဖြင့် အသေးစိတ် တင်ပြထားပါသည်။
+            </p>
+            <div class="flex flex-wrap justify-center gap-4">
+                <a href="#intro" class="px-6 py-3 rounded-lg bg-cyber-green text-black font-bold hover:bg-emerald-400 transition shadow-lg shadow-cyber-green/20">
+                    <i class="fa-solid fa-play mr-2"></i> စတင်လေ့လာမည်
+                </a>
+                <a href="#tracker" class="px-6 py-3 rounded-lg bg-cyber-card border border-cyber-border text-cyber-cyan font-bold hover:bg-slate-800 transition">
+                    <i class="fa-solid fa-list-check mr-2"></i> သင်ယူမှုလမ်းကြောင်း (Tracker)
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-16 w-full">
+
+        <section id="intro" class="scroll-mt-24">
+            <div class="border-l-4 border-cyber-green pl-4 mb-6">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-100">၁။ Red Teaming ဆိုတာဘာလဲ။ (Introduction)</h2>
+                <p class="text-cyber-muted text-sm mt-1">သီအိုရီနှင့် လက်တွေ့အခြေခံသဘောတရားများ</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 glow-box">
+                    <div class="text-cyber-green text-2xl mb-4"><i class="fa-solid fa-user-secret"></i></div>
+                    <h3 class="text-xl font-bold mb-3 text-slate-100">အနှစ်သာရနှင့် ရည်ရွယ်ချက်</h3>
+                    <p class="text-cyber-muted leading-relaxed mb-4">
+                        Red Teaming ဆိုသည်မှာ အဖွဲ့အစည်းတစ်ခု၏ သတင်းအချက်အလက်လုံခြုံရေး (Information Security) အားနည်းချက်များကို အစစ်အမှန် တိုက်ခိုက်သူ (Malicious Hacker/APT) ၏ နည်းပညာ၊ ဗျူဟာများအတိုင်း အတုယူ၍ စမ်းသပ် တိုက်ခိုက်ပြသခြင်း ဖြစ်ပါသည်။ 
+                    </p>
+                    <p class="text-cyber-muted leading-relaxed">
+                        ရည်ရွယ်ချက်မှာ အဖွဲ့အစည်း၏ ကာကွယ်ရေးစနစ် (Blue Team) နှင့် ထောက်လှမ်းရေးစနစ်များက တိုက်ခိုက်မှုများကို မည်မျှအထိ ကြိုတင်သိရှိနိုင်ပြီး တုံ့ပြန်နိုင်သည်ကို တိုင်းတာရန် ဖြစ်ပါသည်။
+                    </p>
+                </div>
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 glow-box flex flex-col justify-between">
+                    <div>
+                        <div class="text-cyber-cyan text-2xl mb-4"><i class="fa-solid fa-bullseye"></i></div>
+                        <h3 class="text-xl font-bold mb-3 text-slate-100">Red Team ရဲ့ အဓိက လုပ်ဆောင်ချက်များ</h3>
+                        <ul class="space-y-3 text-cyber-muted text-sm">
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-check text-cyber-green mt-1 mr-2.5"></i>
+                                <span>စနစ်တစ်ခုတည်းကို ဖောက်ထراقရန်ထက် အဖွဲ့အစည်းတစ်ခုလုံး၏ အားနည်းချက် (လူ၊ လုပ်ငန်းစဉ်၊ နည်းပညာ) ကို ပစ်မှတ်ထားခြင်း။</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-check text-cyber-green mt-1 mr-2.5"></i>
+                                <span>Detection & Response စနစ်များကို ကျော်လွှားကာ လျှို့ဝှက်စွာ ဝင်ရောက်ခြင်း (Stealth & Persistence)။</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fa-solid fa-check text-cyber-green mt-1 mr-2.5"></i>
+                                <span>အရေးကြီးသော ဒေတာ သို့မဟုတ် ပိုင်ဆိုင်မှုများဆီသို့ တိတ်တဆိတ် ချဉ်းကပ်ခြင်း။</span>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-cyber-border text-xs text-cyber-cyan font-mono">
+                        Status: Active Learning Module #01
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="comparison" class="scroll-mt-24">
+            <div class="border-l-4 border-cyber-cyan pl-4 mb-6">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-100">၂။ Ethical Hacking vs Red Teaming vs Pen Testing</h2>
+                <p class="text-cyber-muted text-sm mt-1">ကွာခြားချက်များကို ရှင်းလင်းစွာ နားလည်ခြင်း</p>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 flex flex-col justify-between hover:border-cyber-cyan/50 transition">
+                    <div>
+                        <div class="text-xs font-mono text-cyber-cyan uppercase mb-2">Scope: Broad / General</div>
+                        <h3 class="text-lg font-bold text-slate-100 mb-3">Ethical Hacking</h3>
+                        <p class="text-cyber-muted text-sm leading-relaxed">
+                            လုံခြုံရေး အားနည်းချက်များကို ရှာဖွေဖော်ထုတ်ပေးရန် တရားဝင် ဟက်ကာလုပ်ဆောင်ခြင်းဖြစ်ပြီး နယ်ပယ် ကျယ်ပြန့်သည်။
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-cyber-border text-xs text-slate-400">
+                        <span class="text-cyber-cyan font-bold">ရည်ရွယ်ချက်:</span> အထွေထွေလုံခြုံရေး မြှင့်တင်ရန်
+                    </div>
+                </div>
+                <!-- Card 2 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 flex flex-col justify-between hover:border-cyber-green/50 transition">
+                    <div>
+                        <div class="text-xs font-mono text-cyber-green uppercase mb-2">Scope: Specific Systems</div>
+                        <h3 class="text-lg font-bold text-slate-100 mb-3">Penetration Testing</h3>
+                        <p class="text-cyber-muted text-sm leading-relaxed">
+                            သတ်မှတ်ထားသော application, network သို့မဟုတ် system တစ်ခုချင်းစီ၏ အားနည်းချက်များကို အချိန်တိုအတွင်း အကုန်အစင် ရှာဖွေဖော်ထုတ်ခြင်း ဖြစ်သည်။
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-cyber-border text-xs text-slate-400">
+                        <span class="text-cyber-green font-bold">ရည်ရွယ်ချက်:</span> သီးသန့်စနစ်တစ်ခု၏ အပေါက်များကို ပိတ်ရန်
+                    </div>
+                </div>
+                <!-- Card 3 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 flex flex-col justify-between hover:border-cyber-red/50 transition">
+                    <div>
+                        <div class="text-xs font-mono text-cyber-red uppercase mb-2">Scope: Objective-Based / Goal</div>
+                        <h3 class="text-lg font-bold text-slate-100 mb-3">Red Teaming</h3>
+                        <p class="text-cyber-muted text-sm leading-relaxed">
+                            ပစ်မှတ်တစ်ခု (ဥပမာ- ဘဏ်ငွေစာရင်းဒေတာ) ကို ရယူရန်အတွက် အချိန်ယူကာ စနစ်အားလုံးကို ကျော်ဖြတ်ပြီး တိုက်ခိုက်မှုပုံစံ အပြည့်အစုံ လုပ်ဆောင်ခြင်း ဖြစ်သည်။
+                        </p>
+                    </div>
+                    <div class="mt-6 pt-4 border-t border-cyber-border text-xs text-slate-400">
+                        <span class="text-cyber-red font-bold">ရည်ရွယ်ချက်:</span> တိုက်ခိုက်မှုခံနိုင်ရည်နှင့် တုံ့ပြန်မှုကို စစ်ဆေးရန်
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="lifecycle" class="scroll-mt-24">
+            <div class="border-l-4 border-cyber-red pl-4 mb-6">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-100">၃။ Cyber Kill Chain / Attack Lifecycle</h2>
+                <p class="text-cyber-muted text-sm mt-1">တိုက်ခိုက်မှု အဆင့်ဆင့် (စတင်မှုမှ ရည်မှန်းချက် အောင်မြင်သည်အထိ)</p>
+            </div>
+            
+            <div class="space-y-4">
+                <!-- Accordion Item 1 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion('acc-1')" class="w-full px-6 py-4 text-left flex items-center justify-between bg-slate-900/40 hover:bg-slate-900/80 transition">
+                        <span class="font-bold text-slate-100 flex items-center">
+                            <span class="w-8 h-8 rounded bg-cyber-green/10 text-cyber-green flex items-center justify-center mr-3 font-mono text-sm">01</span>
+                            Reconnaissance (ထောက်လှမ်းခြင်း)
+                        </span>
+                        <i id="icon-acc-1" class="fa-solid fa-chevron-down text-cyber-muted transition-transform"></i>
+                    </button>
+                    <div id="content-acc-1" class="hidden px-6 py-4 text-cyber-muted text-sm space-y-3 border-t border-cyber-border">
+                        <p>ပစ်မှတ်အဖွဲ့အစည်း၏ အချက်အလက်များကို တရားဝင်နှင့် တရားမဝင် နည်းလမ်းများဖြင့် စုဆောင်းခြင်း ဖြစ်သည်။</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li><strong>OSINT (Open Source Intelligence):</strong> ဆိုရှယ်မီဒီယာ၊ ဝက်ဘ်ဆိုက်၊ ကုမ္ပဏီအချက်အလက်များ ရှာဖွေခြင်း။</li>
+                            <li><strong>Footprinting:</strong> အသုံးပြုနေသော နည်းပညာများ၊ ဝန်ထမ်းအမည်များနှင့် အီးမေးလ်လိပ်စာများ စုဆောင်းခြင်း။</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Accordion Item 2 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion('acc-2')" class="w-full px-6 py-4 text-left flex items-center justify-between bg-slate-900/40 hover:bg-slate-900/80 transition">
+                        <span class="font-bold text-slate-100 flex items-center">
+                            <span class="w-8 h-8 rounded bg-cyber-cyan/10 text-cyber-cyan flex items-center justify-center mr-3 font-mono text-sm">02</span>
+                            Scanning & Enumeration (စကန်ဖတ်ခြင်းနှင့် အသေးစိတ် စစ်ဆေးခြင်း)
+                        </span>
+                        <i id="icon-acc-2" class="fa-solid fa-chevron-down text-cyber-muted transition-transform"></i>
+                    </button>
+                    <div id="content-acc-2" class="hidden px-6 py-4 text-cyber-muted text-sm space-y-3 border-t border-cyber-border">
+                        <p>ပစ်မှတ်စနစ်၏ ဖွင့်ထားသော Port များ၊ ဝန်ဆောင်မှုများနှင့် အားနည်းချက်များကို ကိရိယာများအသုံးပြု၍ စကန်ဖတ်ခြင်း ဖြစ်သည်။</p>
+                        <ul class="list-disc pl-5 space-y-1">
+                            <li>အလုပ်လုပ်နေသော IP လိပ်စာများနှင့် Server များကို ရှာဖွေခြင်း။</li>
+                            <li>ဗားရှင်းဟောင်းနေသော Software များ ရှိမရှိ စစ်ဆေးခြင်း။</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Accordion Item 3 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion('acc-3')" class="w-full px-6 py-4 text-left flex items-center justify-between bg-slate-900/40 hover:bg-slate-900/80 transition">
+                        <span class="font-bold text-slate-100 flex items-center">
+                            <span class="w-8 h-8 rounded bg-cyber-red/10 text-cyber-red flex items-center justify-center mr-3 font-mono text-sm">03</span>
+                            Gaining Access (ဝင်ရောက်ခွင့် ရယူခြင်း - Exploitation)
+                        </span>
+                        <i id="icon-acc-3" class="fa-solid fa-chevron-down text-cyber-muted transition-transform"></i>
+                    </button>
+                    <div id="content-acc-3" class="hidden px-6 py-4 text-cyber-muted text-sm space-y-3 border-t border-cyber-border">
+                        <p>ရှာဖွေတွေ့ရှိထားသော အားနည်းချက်များကို အသုံးချ၍ ပစ်မှတ်စနစ်အတွင်းသို့ ပထမဆုံးအကြိမ် ဝင်ရောက်ခွင့် (Initial Access) ရယူခြင်း ဖြစ်သည်။ Phishing, Exploit များ ပေးပို့ခြင်း ပါဝင်သည်။</p>
+                    </div>
+                </div>
+
+                <!-- Accordion Item 4 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion('acc-4')" class="w-full px-6 py-4 text-left flex items-center justify-between bg-slate-900/40 hover:bg-slate-900/80 transition">
+                        <span class="font-bold text-slate-100 flex items-center">
+                            <span class="w-8 h-8 rounded bg-amber-500/10 text-amber-400 flex items-center justify-center mr-3 font-mono text-sm">04</span>
+                            Maintaining Access (ဝင်ရောက်ခွင့်ကို ဆက်လက်ထိန်းသိမ်းခြင်း - Persistence)
+                        </span>
+                        <i id="icon-acc-4" class="fa-solid fa-chevron-down text-cyber-muted transition-transform"></i>
+                    </button>
+                    <div id="content-acc-4" class="hidden px-6 py-4 text-cyber-muted text-sm space-y-3 border-t border-cyber-border">
+                        <p>စနစ်အား Reboot လုပ်လိုက်သည်ဖြစ်စေ၊ Admin က Password ပြောင်းလိုက်သည်ဖြစ်စေ မိမိဝင်ရောက်ခွင့် ပျောက်မသွားစေရန် Backdoor, Scheduled Tasks များ ထည့်သွင်းခြင်း ဖြစ်သည်။</p>
+                    </div>
+                </div>
+
+                <!-- Accordion Item 5 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl overflow-hidden">
+                    <button onclick="toggleAccordion('acc-5')" class="w-full px-6 py-4 text-left flex items-center justify-between bg-slate-900/40 hover:bg-slate-900/80 transition">
+                        <span class="font-bold text-slate-100 flex items-center">
+                            <span class="w-8 h-8 rounded bg-purple-500/10 text-purple-400 flex items-center justify-center mr-3 font-mono text-sm">05</span>
+                            Exfiltration & Covering Tracks (အချက်အလက်ခိုးယူခြင်းနှင့် သဲလွန်စဖျောက်ခြင်း)
+                        </span>
+                        <i id="icon-acc-5" class="fa-solid fa-chevron-down text-cyber-muted transition-transform"></i>
+                    </button>
+                    <div id="content-acc-5" class="hidden px-6 py-4 text-cyber-muted text-sm space-y-3 border-t border-cyber-border">
+                        <p>ရည်မှန်းထားသော အရေးကြီးဒေတာများကို လျှို့ဝှက်စွာ ထုတ်ယူခြင်း (Exfiltration) နှင့် Log ဖိုင်များတွင် မိမိဝင်ရောက်ခဲ့သည့် သဲလွန်စများကို ဖျောက်ဖျက်ခြင်း ဖြစ်သည်။</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="tools" class="scroll-mt-24">
+            <div class="border-l-4 border-cyber-green pl-4 mb-6">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-100">၄။ အခြေခံလေ့လာသူများအတွက် မရှိမဖြစ် ကိရိယာများ (Essential Tools)</h2>
+                <p class="text-cyber-muted text-sm mt-1">Red Teamer များ နေ့စဉ်အသုံးပြုနေကြသော Tool များ</p>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Tool 1 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 flex flex-col justify-between hover:border-cyber-green transition">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-lg font-bold text-slate-100">Nmap</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyber-green/10 text-cyber-green">Network Scanner</span>
+                        </div>
+                        <p class="text-cyber-muted text-sm">Network ပေါ်ရှိ စက်ပစ္စည်းများနှင့် ဖွင့်ထားသော Port များကို စစ်ဆေးရန်အတွက် နံပါတ်တစ်သုံးသော ကိရိယာ။</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-cyber-border font-mono text-xs text-cyber-green">
+                        nmap -sV target_ip
+                    </div>
+                </div>
+
+                <!-- Tool 2 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 flex flex-col justify-between hover:border-cyber-cyan transition">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-lg font-bold text-slate-100">Metasploit</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-cyber-cyan/10 text-cyber-cyan">Exploitation</span>
+                        </div>
+                        <p class="text-cyber-muted text-sm">အားနည်းချက်များကို ဖောက်ထွင်းရန် အသင့်လုပ်ထားသော Exploit modules များနှင့် Payload များ စုစည်းရာ Framework ကြီး ဖြစ်သည်။</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-cyber-border font-mono text-xs text-cyber-cyan">
+                        msfconsole
+                    </div>
+                </div>
+
+                <!-- Tool 3 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 flex flex-col justify-between hover:border-amber-500 transition">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-lg font-bold text-slate-100">Burp Suite</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-500/10 text-amber-400">Web Testing</span>
+                        </div>
+                        <p class="text-cyber-muted text-sm">Web Application လုံခြုံရေး စစ်ဆေးရန်နှင့် HTTP/HTTPS traffic များကို ကြားဖြတ်စစ်ဆေး (Intercept) ရန် အကောင်းဆုံး ဖြစ်သည်။</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-cyber-border font-mono text-xs text-amber-400">
+                        Proxy Intercept On
+                    </div>
+                </div>
+
+                <!-- Tool 4 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5 flex flex-col justify-between hover:border-purple-500 transition">
+                    <div>
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="text-lg font-bold text-slate-100">Wireshark</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-500/10 text-purple-400">Packet Analyzer</span>
+                        </div>
+                        <p class="text-cyber-muted text-sm">Network ပေါ်တွင် သွားလာနေသော Packet များကို ဖမ်းယူ၍ အသေးစိတ် ပြန်လည်စစ်ဆေးရန် (Sniffing) သုံးသည်။</p>
+                    </div>
+                    <div class="mt-4 pt-3 border-t border-cyber-border font-mono text-xs text-purple-400">
+                        tcpdump / wireshark
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="cheatsheet" class="scroll-mt-24">
+            <div class="border-l-4 border-cyber-cyan pl-4 mb-6">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-100">၅။ အခြေခံ Command များ (Beginner Cheat Sheet)</h2>
+                <p class="text-cyber-muted text-sm mt-1">လက်တွေ့အသုံးပြုရမည့် အသုံးအများဆုံး Commands များနှင့် ကူးယူရန် ခလုတ်များ</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Command Box 1 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-network-wired text-cyber-green mr-2"></i>Nmap SYN Scan</span>
+                        <button onclick="copyCommand('cmd1', this)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyber-green rounded text-xs font-mono transition">
+                            <i class="fa-regular fa-copy mr-1"></i> Copy
+                        </button>
+                    </div>
+                    <div class="bg-black/60 rounded p-3 font-mono text-xs text-cyber-green overflow-x-auto border border-cyber-border">
+                        <code id="cmd1">nmap -sS -T4 -p- 192.168.1.1</code>
+                    </div>
+                    <p class="text-xs text-cyber-muted mt-2">ပစ်မှတ် IP ၏ Port အားလုံးကို အမြန်ဆုံးနှင့် အသေးစိတ် စကန်ဖတ်ခြင်း။</p>
+                </div>
+
+                <!-- Command Box 2 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-terminal text-cyber-cyan mr-2"></i>Netcat Listener (Reverse Shell)</span>
+                        <button onclick="copyCommand('cmd2', this)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-cyber-cyan rounded text-xs font-mono transition">
+                            <i class="fa-regular fa-copy mr-1"></i> Copy
+                        </button>
+                    </div>
+                    <div class="bg-black/60 rounded p-3 font-mono text-xs text-cyber-cyan overflow-x-auto border border-cyber-border">
+                        <code id="cmd2">nc -lvnp 4444</code>
+                    </div>
+                    <p class="text-xs text-cyber-muted mt-2">ချိတ်ဆက်လာမည့် Connection ကို 4444 Port တွင် စောင့်ဆိုင်းခြင်း (Listener)။</p>
+                </div>
+
+                <!-- Command Box 3 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-globe text-amber-400 mr-2"></i>Gobuster Directory Brute-force</span>
+                        <button onclick="copyCommand('cmd3', this)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded text-xs font-mono transition">
+                            <i class="fa-regular fa-copy mr-1"></i> Copy
+                        </button>
+                    </div>
+                    <div class="bg-black/60 rounded p-3 font-mono text-xs text-amber-400 overflow-x-auto border border-cyber-border">
+                        <code id="cmd3">gobuster dir -u http://target.com -w /usr/share/wordlists/dirb/common.txt</code>
+                    </div>
+                    <p class="text-xs text-cyber-muted mt-2">ဝက်ဘ်ဆိုက်အတွင်းရှိ မပေါ်လွင်သော လျှို့ဝှက် Directories များနှင့် ဖိုင်များကို ရှာဖွေခြင်း။</p>
+                </div>
+
+                <!-- Command Box 4 -->
+                <div class="bg-cyber-card border border-cyber-border rounded-xl p-5">
+                    <div class="flex items-center justify-between mb-3">
+                        <span class="font-bold text-slate-200 text-sm"><i class="fa-solid fa-code text-purple-400 mr-2"></i>Python Simple HTTP Server</span>
+                        <button onclick="copyCommand('cmd4', this)" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-purple-400 rounded text-xs font-mono transition">
+                            <i class="fa-regular fa-copy mr-1"></i> Copy
+                        </button>
+                    </div>
+                    <div class="bg-black/60 rounded p-3 font-mono text-xs text-purple-400 overflow-x-auto border border-cyber-border">
+                        <code id="cmd4">python3 -m http.server 80</code>
+                    </div>
+                    <p class="text-xs text-cyber-muted mt-2">ဖိုင်များကို တခြားစက်ဆီသို့ လွယ်ကူစွာ ပို့ဆောင်မျှဝေပေးရန် (Payload sharing)။</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="tracker" class="scroll-mt-24">
+            <div class="border-l-4 border-cyber-green pl-4 mb-6">
+                <h2 class="text-2xl sm:text-3xl font-bold text-slate-100">၆။ သင်ယူမှု မှတ်တိုင် (Interactive Journey Tracker)</h2>
+                <p class="text-cyber-muted text-sm mt-1">သင်၏ Red Team လေ့လာမှု တိုးတက်မှုကို ဤနေရာတွင် စစ်ဆေးပါ</p>
+            </div>
+
+            <div class="bg-cyber-card border border-cyber-border rounded-xl p-6 glow-box">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 pb-4 border-b border-cyber-border gap-4">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-100">Beginner Mastery Checklist</h3>
+                        <p class="text-xs text-cyber-muted">ပြီးမြောက်သွားသော အပိုင်းများကို အမှန်ခြစ်ပါ</p>
+                    </div>
+                    <div class="flex items-center space-x-3 w-full sm:w-auto">
+                        <div class="text-sm font-mono text-cyber-green">Progress: <span id="progress-count">0</span>/5</div>
+                        <div class="w-32 bg-slate-800 h-2.5 rounded-full overflow-hidden border border-cyber-border">
+                            <div id="progress-bar" class="bg-cyber-green h-full transition-all duration-300 w-0"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <label class="flex items-center space-x-3 p-3 rounded-lg bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer transition border border-transparent hover:border-cyber-border">
+                        <input type="checkbox" onchange="updateProgress()" class="w-4 h-4 rounded accent-cyber-green bg-black border-cyber-border cursor-pointer">
+                        <span class="text-sm text-slate-200">Linux Commands နှင့် Bash Scripting အခြေခံများကို နားလည်တတ်ကျွမ်းခြင်း။</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-3 rounded-lg bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer transition border border-transparent hover:border-cyber-border">
+                        <input type="checkbox" onchange="updateProgress()" class="w-4 h-4 rounded accent-cyber-green bg-black border-cyber-border cursor-pointer">
+                        <span class="text-sm text-slate-200">Computer Networking (TCP/IP, DNS, HTTP/HTTPS, Ports) ကို ကျွမ်းကျင်စွာသိရှိခြင်း။</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-3 rounded-lg bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer transition border border-transparent hover:border-cyber-border">
+                        <input type="checkbox" onchange="updateProgress()" class="w-4 h-4 rounded accent-cyber-green bg-black border-cyber-border cursor-pointer">
+                        <span class="text-sm text-slate-200">Nmap နှင့် Wireshark ကိရိယာများကို လက်တွေ့အသုံးပြုနိုင်ခြင်း။</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-3 rounded-lg bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer transition border border-transparent hover:border-cyber-border">
+                        <input type="checkbox" onchange="updateProgress()" class="w-4 h-4 rounded accent-cyber-green bg-black border-cyber-border cursor-pointer">
+                        <span class="text-sm text-slate-200">Cyber Kill Chain နှင့် MITRE ATT&CK Framework ကို လေ့လာထားခြင်း။</span>
+                    </label>
+                    <label class="flex items-center space-x-3 p-3 rounded-lg bg-slate-900/40 hover:bg-slate-900/80 cursor-pointer transition border border-transparent hover:border-cyber-border">
+                        <input type="checkbox" onchange="updateProgress()" class="w-4 h-4 rounded accent-cyber-green bg-black border-cyber-border cursor-pointer">
+                        <span class="text-sm text-slate-200">TryHackMe သို့မဟုတ် HackTheBox ကဲ့သို့ Labs များကို စတင်ကစားနေခြင်း။</span>
+                    </label>
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-cyber-card border border-cyber-red/30 rounded-xl p-6 glow-box-red">
+            <div class="flex items-center space-x-3 mb-4">
+                <div class="w-10 h-10 rounded-lg bg-cyber-red/10 border border-cyber-red/40 flex items-center justify-center text-cyber-red">
+                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-slate-100">ဥပဒေနှင့် ကျင့်ဝတ်ဆိုင်ရာ သတိပေးချက် (Rules of Engagement)</h3>
+                    <p class="text-xs text-cyber-muted">Legal & Ethical Responsibility</p>
+                </div>
+            </div>
+            <p class="text-sm text-cyber-muted leading-relaxed">
+                ဤလက်စွဲစာစောင်ပါ အချက်အလက်များနှင့် ကိရိယာများသည် လုံခြုံရေး ပညာရပ်ဆိုင်ရာ ဗဟုသုတဖြန့်ဝေရန်နှင့် တရားဝင်ခွင့်ပြုချက်ရထားသော စနစ်များကို စမ်းသပ်ရန် (Authorized Penetration Testing) အတွက်သာ ရည်ရွယ်ပါသည်။ ခွင့်ပြုချက်မရှိဘဲ မည်သည့်စနစ်ကိုမျှ စမ်းသပ်ခြင်း၊ တိုက်ခိုက်ခြင်း မပြုလုပ်ရန် တိုက်တွန်းပါသည်။ တရားမဝင် လုပ်ရပ်များအတွက် မိမိကိုယ်တိုင်သာ တာဝန်ရှိပါသည်။
+            </p>
+        </section>
+
+    </main>
+
+    <footer class="border-t border-cyber-border mt-16 bg-cyber-dark py-8 text-center text-xs text-cyber-muted">
+        <div class="max-w-7xl mx-auto px-4 space-y-2">
+            <p class="text-slate-400 font-mono">Red Team Beginner Playbook // Built for Security Learners in Myanmar.</p>
+            <p>© 2026 Cyber Security Educational Hub. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Accordion Toggle Logic
+        function toggleAccordion(id) {
+            const content = document.getElementById('content-' + id);
+            const icon = document.getElementById('icon-' + id);
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                icon.classList.add('rotate-180');
+            } else {
+                content.classList.add('hidden');
+                icon.classList.remove('rotate-180');
+            }
+        }
+
+        // Copy Command Function with fallback
+        function copyCommand(elementId, btnElement) {
+            const textToCopy = document.getElementById(elementId).innerText;
+            const originalHTML = btnElement.innerHTML;
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    showCopiedFeedback(btnElement, originalHTML);
+                }).catch(() => {
+                    fallbackCopyText(textToCopy, btnElement, originalHTML);
+                });
+            } else {
+                fallbackCopyText(textToCopy, btnElement, originalHTML);
+            }
+        }
+
+        function fallbackCopyText(text, btnElement, originalHTML) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";  // Avoid scrolling to bottom
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                document.execCommand('copy');
+                showCopiedFeedback(btnElement, originalHTML);
+            } catch (err) {
+                console.error('Failed to copy text', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
+        function showCopiedFeedback(btnElement, originalHTML) {
+            btnElement.innerHTML = '<i class="fa-solid fa-check mr-1"></i> Copied!';
+            btnElement.classList.add('text-cyber-green', 'border-cyber-green');
+            setTimeout(() => {
+                btnElement.innerHTML = originalHTML;
+                btnElement.classList.remove('text-cyber-green', 'border-cyber-green');
+            }, 2000);
+        }
+
+        // Progress Tracker Logic
+        function updateProgress() {
+            const checkboxes = document.querySelectorAll('#tracker input[type="checkbox"]');
+            let checkedCount = 0;
+            checkboxes.forEach(cb => {
+                if (cb.checked) checkedCount++;
+            });
+
+            document.getElementById('progress-count').innerText = checkedCount;
+            const percentage = (checkedCount / checkboxes.length) * 100;
+            document.getElementById('progress-bar').style.width = percentage + '%';
+        }
+    </script>
+</body>
+</html>
